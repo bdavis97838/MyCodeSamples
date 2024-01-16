@@ -1,0 +1,181 @@
+<!--
+    Author: Brian Davis
+    Creation Date: January 15, 2024
+
+    Description:
+    A "File Decoder" tool. The interface uses Bootstrap for styling, ensuring a responsive and modern look. The webpage allows users to upload a text file, which is then processed by the embedded JavaScript. 
+
+    The JavaScript listens for a file input change and updates the label of the custom file input to reflect the chosen file name. Upon clicking the 'Decode' button, the script checks if a file is selected. If not, it triggers a modal alert prompting the user to select a file. If a file is selected, the JavaScript reads its contents and passes it to the 'decode' function.
+
+    The 'decode' function processes the content, extracting lines, splitting them into numbers and words, and then organizing these pairs in a sorted manner. It constructs a pyramid structure of words based on their associated numbers and finally concatenates the last word of each level to form a decoded message. This message is displayed in a modal window. 
+
+    Additionally, the script includes functionality to reset the file input and label text after the user interacts with the modal, ensuring a smooth and continuous user experience. CSS styles in the head section contribute to the aesthetic appeal and usability of the page elements like buttons, modals, and the file input area.
+
+    Created to work stand-alone for easy concept testing. Just save the file and open it in a browser. No server required.
+-->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>File Decoder</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            margin-right: 5px;
+        }
+
+        .modal-icon {
+            font-size: 24px;
+            /* Adjust icon size */
+            color: #007bff;
+            /* Adjust icon color */
+        }
+
+        .modal-footer {
+            justify-content: center;
+            /* Center align buttons */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2 class="text-center">File Decoder</h2>
+        <div class="custom-file mb-3">
+            <input type="file" class="custom-file-input" id="fileInput" accept=".txt">
+            <label class="custom-file-label" for="fileInput">Choose file</label>
+        </div>
+        <button id="decodeButton" class="btn btn-primary btn-block">Decode</button>
+
+        <!-- Custom Modal for Decoded Message -->
+        <div class="modal fade" id="decodedModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <i class="fas fa-file-alt modal-icon"></i> <!-- Font Awesome icon for decoded message -->
+                        <h5 class="modal-title ml-2" id="modalLabel">Decoded Message</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="decodedText"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="okButton">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Modal for Alert -->
+        <div class="modal fade" id="alertModal" tabindex="-1" role="dialog" aria-labelledby="alertModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <i class="fas fa-exclamation-triangle modal-icon"></i>
+                        <!-- Font Awesome icon for alert -->
+                        <h5 class="modal-title ml-2" id="alertModalLabel">Alert</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Please select a text file.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+        <script>
+            // Update the label of the custom file input to show selected file name
+            $('.custom-file-input').on('change', function () {
+                var fileName = $(this).val().split('\\').pop();
+                $(this).next('.custom-file-label').addClass("selected").html(fileName);
+            });
+
+            document.getElementById('decodeButton').addEventListener('click', function () {
+                const fileInput = document.getElementById('fileInput');
+
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
+
+                    reader.onload = function (event) {
+                        const fileContent = event.target.result;
+                        decode(fileContent);
+                    };
+
+                    reader.readAsText(file);
+                } else {
+                    $('#alertModal').modal('show');
+                }
+            });
+
+            document.getElementById('okButton').addEventListener('click', function () {
+                $('#decodedModal').modal('hide');
+                document.getElementById('fileInput').value = ''; // Clear the file input
+                $('.custom-file-label').html('Choose file'); // Reset the label text
+            });
+            function decode(message_file) {
+                let linesWithNumbersAndWords = message_file.split("\n")
+                    .map(line => {
+                        const [number, word] = line.trim().split(" ");
+                        return { number: parseInt(number), word };
+                    })
+                    .filter(item => item.number && item.word)
+                    .sort((a, b) => a.number - b.number);
+
+                let pyramidStructure = () => {
+                    let pyramidArray = [];
+                    let currentIndex = 0;
+
+                    for (let currentLevel = 1; currentIndex < linesWithNumbersAndWords.length; currentLevel++) {
+                        let levelArray = linesWithNumbersAndWords.slice(currentIndex, currentIndex + currentLevel);
+                        if (levelArray.length > 0) {
+                            pyramidArray.push(levelArray);
+                            currentIndex += currentLevel;
+                        }
+                    }
+
+                    return pyramidArray;
+                };
+
+                let pyramidArray = pyramidStructure();
+                let outputString = pyramidArray.map(level => level[level.length - 1].word).join(' ');
+
+                document.getElementById('decodedText').textContent = outputString;
+                $('#decodedModal').modal('show');
+            }
+        </script>
+    </div>
+</body>
+
+</html>
